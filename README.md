@@ -1,4 +1,4 @@
-# SRS LLM Streaming Demo
+# SRS LLM Streaming
 
 将大模型 SSE 流式输出实时编码为视频帧并推送到 SRS（RTMP），再从 RTMP 拉流解码还原为文本，通过 SSE 推送到浏览器展示。
 
