@@ -1,0 +1,30 @@
+# 示例运行配置（请复制为 config.txt 使用）
+# UTF-8 编码，key=value，每行一项。运行目录的 config.txt 会覆盖 JAR 内 app-config.txt。
+
+# 大模型
+api.url=https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions
+api.model=qwen-plus
+api.key=
+
+# RTMP 服务（内网地址或域名）
+rtmp.server=127.0.0.1
+
+# 文本帧尺寸（需重启生效，需与拉流分辨率一致，且能被 BLOCK_SIZE 整除）
+video.width=1920
+video.height=1080
+
+# 编码参数（部分需重启）
+encoder.fps=5
+encoder.crf=30
+encoder.threads=2
+
+# 每帧重复发送次数
+redundancy.count=1
+
+# 载荷策略（当前实现：明文直传，不分片）
+payload.mode=text
+payload.no_chunk=true
+
+# 收尾排空（避免尾部帧还在路上就停流）
+drain.idle_gap_ms=800
+drain.max_wait_ms=6000

@@ -1,0 +1,52 @@
+本文件为通过 Postman 手动构造请求的文本说明与示例（可复制粘贴）。
+
+一、调用本服务的接口（WebServerApp）
+
+1) 触发流式对话（StreamChat）
+- Method: POST
+- URL: http://localhost:23456/streamChat
+- Headers:
+  - Content-Type: application/json
+- Body (raw, JSON):
+{
+  "prompt": "请写一段关于人工智能未来的短评，50字以内。",
+  "clientId": "A"
+}
+
+2) 订阅服务端事件（SSE）
+- Method: GET
+- URL: http://localhost:23456/events?clientId=A
+- Headers:
+  - Accept: text/event-stream
+- 说明：Postman 对 SSE 的展示支持有限；若不便查看，可用浏览器直接访问上面 URL。
+
+3) 查看累积输出
+- Method: GET
+- URL: http://localhost:23456/outputs
+
+
+二、直连大模型接口（DashScope 兼容模式）
+
+来源与字段见：
+- API 地址：见 DashScopeClient.apiUrl
+- 模型与 stream 字段：见 DashScopeClient.streamChat 中的 payload（model、stream、messages）
+
+- Method: POST
+- URL: http://10.134.2.38:80/xlm-gateway-mpmqkb/sfm-api-gateway/gateway/compatible-mode/v1/chat/completions
+- Headers:
+  - Authorization: Bearer <YOUR_DASHSCOPE_API_KEY>
+  - Content-Type: application/json
+- Body (raw, JSON):
+{
+  "model": "rsv-phogilgoeotcgrbslkuogzyim-ht",
+  "stream": true,
+  "messages": [
+    {
+      "role": "user",
+      "content": "请介绍一下 Java 语言的特点，50字以内。"
+    }
+  ]
+}
+
+提示：将 <YOUR_DASHSCOPE_API_KEY> 替换为你的真实密钥。若不需要流式返回，可将 "stream": false。
+

@@ -1,0 +1,202 @@
+<!doctype html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>LLM Streaming Test</title>
+    <style>
+        .panel {
+            border: 1px solid #ccc;
+            padding: 15px;
+            margin: 10px;
+            width: 45%;
+            float: left;
+            box-sizing: border-box;
+            background: #fff;
+            border-radius: 8px;
+        }
+        .output {
+            background: #f5f5f5;
+            padding: 12px;
+            min-height: 200px;
+            white-space: pre-wrap;
+            margin-top: 10px;
+            border: 1px solid #eee;
+            font-family: monospace;
+        }
+        .thinking {
+            color: #666;
+            font-style: italic;
+            display: inline;
+            margin-right: 2px;
+        }
+        .content {
+            color: #333;
+        }
+    </style>
+</head>
+<body style="font-family:sans-serif;background:#f0f2f5;padding:20px">
+
+<h2>LLM Streaming 多用户并发测试</h2>
+
+<!-- 用户 A 面板 -->
+<div class="panel">
+    <h3>用户 A</h3>
+    <div>
+        <label>问题：</label>
+        <input id="promptA" style="width:100%;margin:5px 0" value="请写一段关于人工智能未来的短评，50字以内。"/>
+        <button id="btnA" style="padding:5px 15px;cursor:pointer;background:#1890ff;color:#fff;border:none;border-radius:4px">开始 (User A)</button>
+    </div>
+    <div id="statusA" style="margin-top:8px;color:#666;font-size:12px"></div>
+    <h4>拉流解码输出</h4>
+    <div id="outA" class="output"></div>
+</div>
+
+<!-- 用户 B 面板 -->
+<div class="panel">
+    <h3>用户 B</h3>
+    <div>
+        <label>问题：</label>
+        <input id="promptB" style="width:100%;margin:5px 0" value="请介绍一下 Java 语言的特点，50字以内。"/>
+        <button id="btnB" style="padding:5px 15px;cursor:pointer;background:#52c41a;color:#fff;border:none;border-radius:4px">开始 (User B)</button>
+    </div>
+    <div id="statusB" style="margin-top:8px;color:#666;font-size:12px"></div>
+    <h4>拉流解码输出</h4>
+    <div id="outB" class="output"></div>
+</div>
+
+<script>
+    function setupClient(id) {
+        const btn = document.getElementById('btn' + id);
+        const promptInput = document.getElementById('prompt' + id);
+        const status = document.getElementById('status' + id);
+        const out = document.getElementById('out' + id);
+        let thinkSpan = null;
+        let contentSpan = null;
+
+        function appendThinking(text) {
+            if (!text) return;
+            if (!thinkSpan) {
+                thinkSpan = document.createElement('span');
+                thinkSpan.className = 'thinking';
+                thinkSpan.textContent = '[思考] ';
+                out.appendChild(thinkSpan);
+            }
+            thinkSpan.textContent += text;
+        }
+
+        function appendContent(text) {
+            if (!text) return;
+            if (!contentSpan) {
+                // 首次从“思考”切换到“正式回答”，插入一次换行
+                if (thinkSpan) {
+                    out.appendChild(document.createElement('br'));
+                }
+                contentSpan = document.createElement('span');
+                contentSpan.className = 'content';
+                out.appendChild(contentSpan);
+            }
+            contentSpan.textContent += text;
+        }
+
+        // 建立 SSE 连接
+        const es = new EventSource('/events?clientId=' + id);
+        
+        es.onmessage = (e) => {
+            const d = e.data;
+            if (d === '[DONE]') { return; }
+            
+            if (!d) return;
+
+            let handled = false;
+            // 1. 尝试严格 JSON 解析
+            if (d.trim()[0] === '{') {
+                try {
+                    const o = JSON.parse(d);
+                    const choices = (o && o.choices) || [];
+                    const first = choices[0];
+                    if (first) {
+                        const delta = first.delta || first.message;
+                        if (delta) {
+                            if (delta.reasoning_content) {
+                                appendThinking(delta.reasoning_content);
+                                handled = true;
+                            }
+                            if (delta.content) {
+                                appendContent(delta.content);
+                                handled = true;
+                            }
+                        }
+                    }
+                } catch (e2) {
+                    console.warn('JSON parse error, falling back to regex:', e2);
+                }
+            }
+
+            // 2. 正则回退解析 (处理 JSON 截断或格式错误)
+            if (!handled) {
+                // 提取 reasoning_content
+                const thinkRe = /"reasoning_content"\s*:\s*"([\s\S]*?)"/g;
+                let m;
+                while ((m = thinkRe.exec(d)) !== null) {
+                    const txt = unescapeJson(m[1]);
+                    appendThinking(txt);
+                    handled = true;
+                }
+                
+                // 提取 content
+                const contentRe = /"content"\s*:\s*"([\s\S]*?)"/g;
+                while ((m = contentRe.exec(d)) !== null) {
+                    const txt = unescapeJson(m[1]);
+                    appendContent(txt);
+                    handled = true;
+                }
+
+                // 3. 仍无法解析时，直接把原始文本输出，确保截断 JSON 也能展示
+                if (!handled) {
+                    appendContent(d);
+                }
+            }
+        };
+
+        es.onerror = () => {
+            status.textContent = 'SSE连接断开';
+        };
+
+        btn.onclick = async () => {
+            // 清空输出并重置累积指针，避免引用已被清空的旧节点导致“看不见”
+            out.textContent = '';
+            thinkSpan = null;
+            contentSpan = null;
+            status.textContent = '正在请求...';
+            
+            try {
+                const resp = await fetch('/streamChat', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({prompt: promptInput.value, clientId: id})
+                });
+                
+                const txt = await resp.text();
+                let msg = '已触发';
+                try {
+                    const o = JSON.parse(txt || '{}');
+                    msg = o.message || msg;
+                } catch(e) {
+                    msg = txt || msg;
+                }
+                status.textContent = msg;
+            } catch (err) {
+                status.textContent = '请求失败: ' + err.message;
+            }
+        };
+    }
+
+    function unescapeJson(str) {
+        return str.replace(/\\n/g, '\n').replace(/\\"/g, '"').replace(/\\\\/g, '\\');
+    }
+
+    setupClient('A');
+    setupClient('B');
+</script>
+</body>
+</html>

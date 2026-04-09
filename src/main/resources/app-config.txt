@@ -1,0 +1,15 @@
+# 可将同名键放到运行目录 config.txt 覆盖
+api.url=https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions
+api.model=qwen-plus
+api.key=
+rtmp.server=127.0.0.1
+video.width=1920
+video.height=1080
+encoder.fps=5
+encoder.crf=30
+encoder.threads=2
+redundancy.count=1
+payload.mode=text
+payload.no_chunk=true
+drain.idle_gap_ms=800
+drain.max_wait_ms=6000

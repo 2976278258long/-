@@ -1,0 +1,16 @@
+target/
+*.log
+hs_err_pid*.log
+
+# Local runtime config (contains secrets)
+config.txt
+
+.arts/
+.codeartsdoer/
+.codemate/
+META-INF/
+dependency-reduced-pom.xml
+
+.idea/
+.vscode/
+*.iml
