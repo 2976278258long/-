@@ -47,23 +47,15 @@ java -jar srs-llm-demo-1.0-SNAPSHOT.jar
 
 ## 常见问题
 
-### Q1: 内网运行报 NoClassDefFoundError: org/bytedeco/ffmpeg/avformat/AVFormatContext
-- 原因：运行了 original 瘦包或不带依赖的 JAR
-- 解决：使用 target/srs-llm-demo-1.0-SNAPSHOT.jar 或 -shaded.jar
 
-### Q2: 8K 分辨率启动失败（OpenH264 invalid 7680x4320）
+### :8K 分辨率启动失败（OpenH264 invalid 7680x4320）
 - 原因：OpenH264 编码器对 width×height 有上限
 - 解决：使用 3840×2160 或更低分辨率
 
-### Q3: 拉流“很久才解码一次”
+###  拉流“很久才解码一次”
 - 常见原因：推拉分辨率不一致 / 块大小与压缩参数导致帧头误码
 - 解决：确保拉流分辨率与 video.width/height 完全一致；必要时降低 CRF 或增大 BLOCK_SIZE
 
-## 发布到 GitHub / CSDN 的建议
-- 安全：不要提交任何 api.key、token、内网域名/公网 IP。config.txt 已被忽略，请只提交 config.example.txt
-- GitHub：README 放“项目介绍+快速开始+配置+FAQ”；发布 Release 时附带可执行 JAR 与示例 config
-- CSDN：用“问题背景→方案→关键实现→踩坑与排障→效果对比→源码地址”的结构
-  - 可参考：docs/csdn-post.md
 
 ## 主要类
 - Web 入口与编排：src/main/java/com/example/srsdemo/WebServerApp.java
